@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Draw Features</title>
+    <link rel="stylesheet" href="https://openlayers.org/en/v4.2.0/css/ol.css" type="text/css">
+    <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+    <script src="https://openlayers.org/en/v4.2.0/build/ol.js"></script> 
+	<script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+    <div id="map" class="map"><div id="popup"></div></div>
+    <form class="form-inline">
+      <select id="type">
+	    <option value="None">None</option>
+        <option value="Point">Point of Interest</option>
+        <option value="LineString">Route Planner</option>
+        <option value="Polygon">Custom Search</option>
+        <option value="Circle">Circle Search</option>
+      </select>
+    </form>
+    <script> 
+	
+	 var object1 = new ol.Feature({
+        geometry: new ol.geom.Point([-500, 6801000]),
+        name: 'Squad Leader',
+      });  
+	  var object2 = new ol.Feature({
+        geometry: new ol.geom.Point([-2400,6803600]),
+        name: 'Squad Member 1'
+      });
+	   var object3 = new ol.Feature({
+        geometry: new ol.geom.Point([-1550, 6802000]),
+        name: 'Squad Member 2',
+      });  
+	  var object4 = new ol.Feature({
+        geometry: new ol.geom.Point([-500,6800000]),
+        name: 'Squad Member 3',
+      });
+	  var object5 = new ol.Feature({
+        geometry: new ol.geom.Point([-2500,6800000]),
+        name: 'Drone 1',
+      });
+	  
+      var squadmember = new ol.style.Style({
+        image: new ol.style.Icon(/** @type {olx.style.IconOptions} */ ({
+          anchor: [15, 40],
+          anchorXUnits: ' pixels',
+          anchorYUnits: ' pixels',
+          src: 'https://image.ibb.co/b238nv/SquadMem.png'
+		  }))
+      }); 
+	  var squadleader = new ol.style.Style({
+        image: new ol.style.Icon(/** @type {olx.style.IconOptions} */ ({
+          anchor: [15, 40],
+          anchorXUnits: ' pixels',
+          anchorYUnits: ' pixels',
+          src: 'https://image.ibb.co/cmFSfF/SquadLea.png'
+		  }))
+      });
+	  var drone = new ol.style.Style({
+        image: new ol.style.Icon(/** @type {olx.style.IconOptions} */ ({
+          anchor: [15, 40],
+          anchorXUnits: ' pixels',
+          anchorYUnits: ' pixels',
+          src: 'https://image.ibb.co/jpouAF/Drone2.png'
+		  }))
+      });
+	  
+      object1.setStyle(squadleader);
+	  object2.setStyle(squadmember); 
+	  object3.setStyle(squadmember);
+	  object4.setStyle(squadmember);
+	  object5.setStyle(drone);
+	   
+	  
+      var vectorSource = new ol.source.Vector({
+        features: [object1,object2,object3,object4,object5]
+      });
+
+      var vectorLayer = new ol.layer.Vector({source: vectorSource});
+	
+	  var raster = new ol.layer.Tile({
+        source: new ol.source.OSM()
+      });
+
+      var source = new ol.source.Vector({wrapX: false});
+
+      var vector = new ol.layer.Vector({
+        source: source
+      });
+
+      var map = new ol.Map({
+        layers: [raster, vector, vectorLayer],
+        target: 'map',
+        view: new ol.View({
+          center: object1.getGeometry().getCoordinates(),
+          zoom: 13
+        })
+      });
+	
+		var element = document.getElementById('popup');
+	    var shown = false;
+	
+	 var popup = new ol.Overlay({
+        element: element,
+        positioning: 'bottom-center',
+        stopEvent: false,
+        offset: [0, -40]
+      });
+      map.addOverlay(popup);
+      var typeSelect = document.getElementById('type');
+
+      var draw; // global so we can remove it later
+      function addInteraction() {
+        var value = typeSelect.value;
+        if (value !== 'None') {
+          draw = new ol.interaction.Draw({
+            source: source,
+            type: /** @type {ol.geom.GeometryType} */ (typeSelect.value) 
+			
+          });
+         map.addInteraction(draw);
+        }		 
+      }
+	  
+	 map.on('click', function(evt) { 
+			if(shown){
+					$(element).popover('destroy'); 
+					shown= false;
+			}else{ 
+				var feature = map.forEachFeatureAtPixel(evt.pixel,
+						function(feature) {
+						return feature;
+						});
+				if (feature) {
+				var coordinates = feature.getGeometry().getCoordinates();
+				popup.setPosition(coordinates);
+				$(element).popover({
+					'placement': 'top',
+					'html': true,
+					'content': feature.get('name')
+				});
+				} else { 
+					$(element).popover('destroy');   
+					shown= false;
+				} 
+					$(element).popover('show');  
+					shown= true;
+			}
+	  }); 
+		
+	// change mouse cursor when over marker
+		map.on('pointermove', function(e) {
+		if (e.dragging) {
+		  $(element).popover('destroy'); 
+		  shown= false;
+		  return;
+		}
+		var pixel = map.getEventPixel(e.originalEvent);
+	var hit = map.hasFeatureAtPixel(pixel);
+	map.getTarget().style.cursor = hit ? 'pointer' : '';
+	 });
+	
+	
+      /**
+       * Handle change event.
+       */
+      typeSelect.onchange = function() {
+        map.removeInteraction(draw);
+        addInteraction();
+      };
+		
+	if (typeSelect.value !== 'None'){	
+      addInteraction();
+	}
+	  
+	  
+    </script>
+  </body>
+</html>
